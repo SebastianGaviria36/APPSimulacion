@@ -41,7 +41,7 @@ logranksim <- function(n,censrate,test,iter=10000){
   mean(replicate(iter, f(n,censrate,test)))
 }
 
-grid <- expand.grid(n = c(10,20,40,80,160), censrate = seq(0,0.8,0.2), test = 0:1)
+grid <- expand.grid(n = c(10,20,40,80,160,320,640), censrate = seq(0,0.8,0.1), test = 0:1)
 
 power <- c()
 
@@ -51,20 +51,26 @@ for (i in 1:nrow(grid)){
 
 simres <- cbind(grid,power)
 
+saveRDS(simres, "simres2.Rds")
+
 simres <- simres %>%
   mutate(test = if_else(test==0,"LogRank","Peto"),
          n = as.factor(n),
          censrate = as.factor(censrate))
 
 #-----------------------Finish simulation----------------------------------------
-
+ 
+simres <- simres[simres$n!=640,] #n = 640 not necessary
 ggplot(simres, aes(x=censrate, y = power, group = n, colour = n)) + 
   facet_wrap(~test) +
   geom_line(cex=0.8) +
-  labs(x = "Tasa de censura", y = "Potencia", title = "Potencia Test:") + 
+  labs(x = "Tasa de censura", y = "Potencia") + 
   theme_light() +
-  theme(plot.title = element_text(hjust = 0.5))
-
+  theme(strip.text.x = element_text(
+    size = 12, color = "black", face = "bold.italic"),
+    plot.title = element_text(hjust = 0.5),
+    text = element_text(size = 20),
+    axis.text.x= element_text(size= 10))
 
 
 plot_ly(x=simres[simres$test=="LogRank",2], 
@@ -73,10 +79,16 @@ plot_ly(x=simres[simres$test=="LogRank",2],
         type="mesh3d",
         intensity = simres[simres$test=="LogRank",4],
         color = simres[simres$test=="LogRank",4]) %>%
-  layout(title = "Potencia LogRank",
-         scene = list(xaxis=list(title = "Tasa de censura"),
-                      yaxis=list(title = "n"),
-                      zaxis=list(title = "Potencia")))
+  layout(title = "Potencia Test LogRank", font=list(size = 12),
+         scene = list(xaxis=list(title = "Tasa de censura", 
+                                 tickfont = list(size = 15),
+                                 titlefont = list(size = 20)),
+                      yaxis=list(title = "n", 
+                                 tickfont = list(size = 15),
+                                 titlefont = list(size = 20)),
+                      zaxis=list(title = "Potencia", 
+                                 tickfont = list(size = 15),
+                                 titlefont = list(size = 20))))
 
 
 plot_ly(x=simres[simres$test=="Peto",2], 
@@ -85,10 +97,29 @@ plot_ly(x=simres[simres$test=="Peto",2],
         type="mesh3d",
         intensity = simres[simres$test=="Peto",4],
         color = simres[simres$test=="Peto",4]) %>%
-  layout(title = "Potencia Peto",
-         scene = list(xaxis=list(title = "Tasa de censura"),
-                      yaxis=list(title = "n"),
-                      zaxis=list(title = "Potencia")))
+  layout(title = "Potencia test de Peto", font=list(size = 12),
+          scene = list(xaxis=list(title = "Tasa de censura", 
+                                  tickfont = list(size = 15),
+                                  titlefont = list(size = 20)),
+                       yaxis=list(title = "n", 
+                                  tickfont = list(size = 15),
+                                  titlefont = list(size = 20)),
+                       zaxis=list(title = "Potencia", 
+                                  tickfont = list(size = 15),
+                                  titlefont = list(size = 20))))
 
+distframe <- data.frame(dist=c(rweibull(10000,params[1],params[2]),
+                               rweibull(10000,3,200)),
+                        Distribution = factor(c(rep("Ovarian",10000),
+                                                rep("Setup",10000))))
 
+distframe%>%
+  ggplot(aes(x=dist, fill=Distribution)) +
+  geom_density(alpha=0.3, cex=0.7)+ 
+  labs(x = "Tiempos de falla", y = "Densidad", title = "Densidad de ambas muestras") + 
+  theme_light() +
+  theme(plot.title = element_text(hjust = 0.5),
+        text = element_text(size = 20),
+        axis.text.x= element_text(size= 10),
+        axis.text.y= element_text(size= 10))
 
